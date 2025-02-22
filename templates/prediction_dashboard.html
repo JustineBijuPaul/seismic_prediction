@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analysis Results - Seismic Quake</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-slate-900 text-white min-h-screen">
+    <!-- Loading Screen -->
+    <div id="preloader" class="fixed inset-0 bg-slate-900 z-50 flex items-center justify-center">
+        <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500"></div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="bg-slate-800/50 backdrop-blur-lg fixed w-full z-40">
+        <div class="container mx-auto px-6 py-4">
+            <div class="flex items-center justify-between">
+                <a href="/" class="flex items-center space-x-3">
+                    <img src="{{ url_for('static', filename='images/logo-w.svg') }}" alt="Logo" class="h-10 w-10">
+                    <span class="text-xl font-bold bg-gradient-to-r from-blue-500 to-green-500 bg-clip-text text-transparent">
+                        Seismic Quake
+                    </span>
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="pt-32 pb-20">
+        <div class="container mx-auto px-6">
+            <div class="max-w-4xl mx-auto">
+                <h1 class="text-4xl font-bold mb-8 bg-gradient-to-r from-blue-500 to-green-500 bg-clip-text text-transparent">
+                    Analysis Results
+                </h1>
+                
+                <div class="bg-slate-800/50 backdrop-blur rounded-xl p-8 space-y-6">
+                    <h2 class="text-xl font-semibold text-slate-200">File: {{ file_name }}</h2>
+
+                    {% if alert %}
+                    <div class="p-6 rounded-xl {% if alert.level == 'SEVERE' %}bg-red-500/10 border-red-500{% elif alert.level == 'WARNING' %}bg-yellow-500/10 border-yellow-500{% else %}bg-blue-500/10 border-blue-500{% endif %} border">
+                        <h3 class="text-2xl font-bold mb-3 {% if alert.level == 'SEVERE' %}text-red-400{% elif alert.level == 'WARNING' %}text-yellow-400{% else %}text-blue-400{% endif %}">
+                            {{ alert.level }}
+                        </h3>
+                        <p class="text-slate-200 mb-4">{{ alert.message }}</p>
+                        <p class="text-slate-300"><strong>Action Required:</strong> {{ alert.action_required }}</p>
+                    </div>
+                    {% endif %}
+
+                    <div class="grid gap-6">
+                        <!-- Analysis Details -->
+                        <div class="p-6 bg-slate-700/30 rounded-xl">
+                            <h3 class="font-semibold text-xl mb-4 text-slate-200">Earthquake Detection</h3>
+                            <div class="space-y-3 text-slate-300">
+                                <p>Probability: <span class="text-blue-400">{{ "%.1f"|format(result.probability * 100) }}%</span></p>
+                                <p>Status: <span class="{% if result.is_earthquake %}text-red-400{% else %}text-green-400{% endif %}">
+                                    {{ "Detected" if result.is_earthquake else "Not Detected" }}
+                                </span></p>
+                            </div>
+                        </div>
+
+                        {% if result.hours_to_event %}
+                        <div class="p-6 bg-slate-700/30 rounded-xl">
+                            <h3 class="font-semibold text-xl mb-4 text-slate-200">Time Prediction</h3>
+                            <div class="space-y-3 text-slate-300">
+                                <p>Hours to Event: <span class="text-blue-400">{{ "%.1f"|format(result.hours_to_event) }}</span></p>
+                                <p>Confidence: <span class="text-blue-400">{{ result.confidence }}</span></p>
+                                <p>Estimated Time: <span class="text-blue-400">{{ result.estimated_time }}</span></p>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <div class="p-6 bg-slate-700/30 rounded-xl">
+                            <h3 class="font-semibold text-xl mb-4 text-slate-200">Precursor Analysis</h3>
+                            <div class="space-y-3 text-slate-300">
+                                <p>Foreshock Pattern: 
+                                    <span class="{% if result.has_foreshock_pattern %}text-yellow-400{% else %}text-green-400{% endif %}">
+                                        {{ "Detected" if result.has_foreshock_pattern else "Not Detected" }}
+                                    </span>
+                                </p>
+                                {% if result.has_foreshock_pattern %}
+                                <p>Consistency: <span class="text-blue-400">{{ "%.1f"|format(result.foreshock_consistency * 100) }}%</span></p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-center mt-8">
+                        <a href="/upload" 
+                           class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-600 to-green-600 rounded-lg hover:from-blue-700 hover:to-green-700 transition-all transform hover:-translate-y-1">
+                            <i class="fas fa-upload mr-2"></i>
+                            Analyze Another File
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Preloader
+        window.addEventListener('load', function() {
+            const preloader = document.getElementById('preloader');
+            preloader.classList.add('opacity-0');
+            setTimeout(() => {
+                preloader.style.display = 'none';
+            }, 300);
+        });
+    </script>
+</body>
+</html>

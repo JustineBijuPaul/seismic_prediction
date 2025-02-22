@@ -1,0 +1,85 @@
+<!-- upload.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload - Seismic Quake</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-slate-900 text-white min-h-screen">
+    <!-- Loading Screen -->
+    <div id="preloader" class="fixed inset-0 bg-slate-900 z-50 flex items-center justify-center">
+        <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500"></div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="bg-slate-800/50 backdrop-blur-lg fixed w-full z-40">
+        <div class="container mx-auto px-6 py-4">
+            <div class="flex items-center justify-between">
+                <a href="/" class="flex items-center space-x-3">
+                    <img src="{{ url_for('static', filename='images/logo-w.svg') }}" alt="Logo" class="h-10 w-10">
+                    <span class="text-xl font-bold bg-gradient-to-r from-blue-500 to-green-500 bg-clip-text text-transparent">
+                        Seismic Quake
+                    </span>
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="pt-32 pb-20">
+        <div class="container mx-auto px-6">
+            <div class="max-w-2xl mx-auto">
+                <h1 class="text-4xl font-bold mb-8 bg-gradient-to-r from-blue-500 to-green-500 bg-clip-text text-transparent">
+                    Upload Seismic Data
+                </h1>
+
+                {% with messages = get_flashed_messages() %}
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="mb-6 p-4 bg-red-500/10 border border-red-500 rounded-lg text-red-400">
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                <div class="bg-slate-800/50 backdrop-blur rounded-xl p-8">
+                    <form action="/upload" method="post" enctype="multipart/form-data" class="space-y-6">
+                        <div>
+                            <label class="block text-lg font-semibold text-slate-200 mb-4">
+                                Select Seismic Data File
+                            </label>
+                            <input type="file" name="file" 
+                                   accept=".mseed,.csv,.xml,.mp3,.wav"
+                                   class="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-slate-200"
+                                   required>
+                            <p class="mt-2 text-slate-400">
+                                Supported formats: MSEED, CSV, XML, MP3, WAV
+                            </p>
+                        </div>
+
+                        <button type="submit" 
+                                class="w-full bg-gradient-to-r from-blue-600 to-green-600 text-white px-6 py-3 rounded-lg hover:from-blue-700 hover:to-green-700 transition-all transform hover:-translate-y-1">
+                            <i class="fas fa-upload mr-2"></i>
+                            Upload and Analyze
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Preloader
+        window.addEventListener('load', function() {
+            const preloader = document.getElementById('preloader');
+            preloader.classList.add('opacity-0');
+            setTimeout(() => {
+                preloader.style.display = 'none';
+            }, 300);
+        });
+    </script>
+</body>
+</html>

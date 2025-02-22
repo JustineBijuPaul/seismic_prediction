@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seismic Quake - USGS Earthquake Monitoring</title>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+
+    <style>
+        #map {
+            height: 100%;
+            min-height: 500px;
+            width: 100%;
+            border-radius: 0.75rem;
+        }
+
+        .magnitude {
+            font-weight: bold;
+            display: inline-block;
+            width: 40px;
+            text-align: center;
+            padding: 3px;
+            border-radius: 3px;
+            color: white;
+        }
+
+        .mag-low {
+            background-color: #1a9641;
+        }
+
+        .mag-medium {
+            background-color: #fdae61;
+        }
+
+        .mag-high {
+            background-color: #d7191c;
+        }
+
+        .earthquake-item {
+            transition: background-color 0.2s;
+        }
+
+        .earthquake-item:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+
+<body class="bg-slate-900 text-white min-h-screen">
+    <!-- Loading Screen -->
+    <div id="preloader" class="fixed inset-0 bg-slate-900 z-50 flex items-center justify-center">
+        <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500"></div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="bg-slate-800/50 backdrop-blur-lg fixed w-full z-40">
+        <div class="container mx-auto px-6 py-4">
+            <div class="flex items-center justify-between">
+                <a href="/" class="flex items-center space-x-3">
+                    <img src="/api/placeholder/40/40" alt="Logo" class="h-10 w-10">
+                    <span
+                        class="text-xl font-bold bg-gradient-to-r from-blue-500 to-green-500 bg-clip-text text-transparent">
+                        Seismic Quake
+                    </span>
+                </a>
+                <div class="hidden md:flex space-x-6">
+                    <a href="/monitor" class="text-slate-200 hover:text-white">Local Monitoring</a>
+                    <a href="/usgs_monitor" class="text-slate-200 hover:text-white font-bold">USGS Monitoring</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="pt-32 pb-20">
+        <div class="container mx-auto px-6">
+            <h1 class="text-4xl font-bold mb-8 bg-gradient-to-r from-blue-500 to-green-500 bg-clip-text text-transparent">
+                USGS Earthquake Monitoring
+            </h1>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Left Panel - Controls -->
+                <div class="lg:col-span-1">
+                    <!-- Filter Controls -->
+                    <div class="bg-slate-800/50 backdrop-blur rounded-xl p-6 mb-8">
+                        <h2 class="text-2xl font-bold mb-6 text-slate-200">Filter Earthquakes</h2>
+                        
+                        <form id="filterForm" class="space-y-6">
+                            <div>
+                                <label for="timeRange" class="block text-lg font-semibold text-slate-200 mb-2">
+                                    Time Range:
+                                </label>
+                                <select id="timeRange"
+                                    class="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-slate-200">
+                                    <option value="day">Past 24 Hours</option>
+                                    <option value="week">Past 7 Days</option>
+                                    <option value="month">Past 30 Days</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label for="minMagnitude" class="block text-lg font-semibold text-slate-200 mb-2">
+                                    Minimum Magnitude:
+                                </label>
+                                <input type="number" id="minMagnitude" value="2.5" min="0" max="10" step="0.1"
+                                    class="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-slate-200">
+                            </div>
+
+                            <button id="updateMap"
+                                class="w-full bg-gradient-to-r from-blue-600 to-green-600 text-white px-6 py-3 rounded-lg hover:from-blue-700 hover:to-green-700 transition-all transform hover:-translate-y-1">
+                                <i class="fas fa-sync-alt mr-2"></i>
+                                Update Map
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Live Monitoring Controls -->
+                    <div class="bg-slate-800/50 backdrop-blur rounded-xl p-6 mb-8">
+                        <h2 class="text-2xl font-bold mb-6 text-slate-200">Start Live Monitoring</h2>
+
+                        <form id="usgsMonitorForm" class="space-y-6">
+                            <div>
+                                <label class="block text-lg font-semibold text-slate-200 mb-2">
+                                    Minimum Magnitude
+                                </label>
+                                <input type="number" name="min_magnitude" value="2.5" min="1.0" step="0.1"
+                                    class="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-slate-200"
+                                    placeholder="Minimum earthquake magnitude to track">
+                            </div>
+
+                            <div>
+                                <label class="block text-lg font-semibold text-slate-200 mb-2">
+                                    Check Interval (seconds)
+                                </label>
+                                <input type="number" name="interval" value="300" min="60"
+                                    class="w-full px-4 py-3 bg-slate-700/50 border border-slate-600 rounded-lg text-slate-200"
+                                    placeholder="Time between API checks">
+                            </div>
+
+                            <button type="submit"
+                                class="w-full bg-gradient-to-r from-blue-600 to-green-600 text-white px-6 py-3 rounded-lg hover:from-blue-700 hover:to-green-700 transition-all transform hover:-translate-y-1">
+                                <i class="fas fa-satellite-dish mr-2"></i>
+                                Start USGS Monitoring
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Live Monitoring Status -->
+                    <div id="usgsStatus" class="hidden bg-slate-800/50 backdrop-blur rounded-xl p-6 mb-8">
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-xl font-bold text-slate-200">Monitoring Status</h2>
+                            <div class="flex items-center">
+                                <span id="usgsMonitoringBadge"
+                                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    <span class="animate-pulse h-2 w-2 bg-green-500 rounded-full mr-1.5"></span>
+                                    Monitoring
+                                </span>
+                                <button id="stopUsgsBtn"
+                                    class="ml-4 bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg text-sm">
+                                    Stop
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Center/Right - Map and List -->
+                <div class="lg:col-span-2">
+                    <!-- Map Container -->
+                    <div class="bg-slate-800/50 backdrop-blur rounded-xl p-6 mb-8">
+                        <h2 class="text-2xl font-bold mb-6 text-slate-200">USGS Earthquake Map</h2>
+                        <div id="loadingIndicator" class="hidden relative z-10 p-4 bg-slate-700/80 rounded-lg text-center m-4">
+                            <p>Loading earthquake data...</p>
+                        </div>
+                        <div id="map" class="z-0"></div>
+                    </div>
+
+                    <!-- Recent Earthquakes List -->
+                    <div class="bg-slate-800/50 backdrop-blur rounded-xl p-6">
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-2xl font-bold text-slate-200">Recent Earthquakes</h2>
+                            <p id="quakeCount" class="text-slate-400">Loading...</p>
+                        </div>
+                        <div id="earthquakeList" class="space-y-3">
+                            <!-- Earthquake list items will be added here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Alerts Section -->
+            <div class="mt-8">
+                <h2 class="text-2xl font-bold mb-6 text-slate-200">Earthquake Alerts</h2>
+                <div id="usgsAlerts" class="space-y-4">
+                    <!-- USGS Alerts will be populated here -->
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Leaflet JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.js"></script>
+
+    <script>
+        // Preloader
+        window.addEventListener('load', function () {
+            const preloader = document.getElementById('preloader');
+            preloader.classList.add('opacity-0');
+            setTimeout(() => {
+                preloader.style.display = 'none';
+            }, 300);
+        });
+
+        // Initialize the map
+        const map = L.map('map').setView([20, 0], 2);
+
+        // Add base map layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        // Store markers for easy reference
+        let markers = [];
+        let earthquakeData = [];
+
+        // Function to determine marker color based on magnitude
+        function getMarkerColor(magnitude) {
+            if (magnitude < 3) return '#1a9641';
+            if (magnitude < 5) return '#fdae61';
+            return '#d7191c';
+        }
+
+        // Function to determine marker size based on magnitude
+        function getMarkerSize(magnitude) {
+            return Math.max(5, magnitude * 3);
+        }
+
+        // Function to get CSS class for magnitude display
+        function getMagnitudeClass(magnitude) {
+            if (magnitude < 3) return 'mag-low';
+            if (magnitude < 5) return 'mag-medium';
+            return 'mag-high';
+        }
+
+        // Function to format date
+        function formatDate(timestamp) {
+            const date = new Date(timestamp);
+            return date.toLocaleString();
+        }
+
+        // Function to load earthquake data
+        function loadEarthquakeData() {
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            loadingIndicator.style.display = 'block';
+
+            const timeRange = document.getElementById('timeRange').value;
+            const minMagnitude = document.getElementById('minMagnitude').value;
+
+            // Fetch earthquake data from our API endpoint
+            fetch(`/api/usgs_data?timeRange=${timeRange}&minMagnitude=${minMagnitude}`)
+                .then(response => response.json())
+                .then(data => {
+                    // Clear existing markers
+                    markers.forEach(marker => map.removeLayer(marker));
+                    markers = [];
+                    earthquakeData = data.features;
+
+                    // Update earthquake count
+                    document.getElementById('quakeCount').textContent =
+                        `Showing ${earthquakeData.length} earthquakes`;
+
+                    // Add markers to the map
+                    earthquakeData.forEach(quake => {
+                        const properties = quake.properties;
+                        const geometry = quake.geometry;
+                        const coordinates = geometry.coordinates;
+
+                        // Create marker
+                        const marker = L.circleMarker([coordinates[1], coordinates[0]], {
+                            radius: getMarkerSize(properties.mag),
+                            fillColor: getMarkerColor(properties.mag),
+                            color: "#000",
+                            weight: 1,
+                            opacity: 1,
+                            fillOpacity: 0.8
+                        });
+
+                        // Add popup
+                        marker.bindPopup(`
+                            <h3>${properties.place}</h3>
+                            <p><strong>Magnitude:</strong> ${properties.mag}</p>
+                            <p><strong>Time:</strong> ${formatDate(properties.time)}</p>
+                            <p><strong>Depth:</strong> ${coordinates[2]} km</p>
+                            <p><a href="${properties.url}" target="_blank">More details</a></p>
+                        `);
+
+                        marker.addTo(map);
+                        markers.push(marker);
+                    });
+
+                    // Update the sidebar list
+                    updateEarthquakeList();
+
+                    loadingIndicator.style.display = 'none';
+                })
+                .catch(error => {
+                    console.error('Error fetching earthquake data:', error);
+                    loadingIndicator.style.display = 'none';
+                    alert('Error loading earthquake data. Please try again.');
+                });
+        }
+
+        // Function to update earthquake list in sidebar
+        function updateEarthquakeList() {
+            const listContainer = document.getElementById('earthquakeList');
+            listContainer.innerHTML = '';
+
+            // Sort earthquakes by time (newest first)
+            earthquakeData.sort((a, b) => b.properties.time - a.properties.time);
+
+            // Add top 10 earthquakes to the list
+            earthquakeData.slice(0, 10).forEach((quake, index) => {
+                const properties = quake.properties;
+                const listItem = document.createElement('div');
+                listItem.className = 'earthquake-item p-4 bg-slate-700/30 rounded-xl cursor-pointer';
+                listItem.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h4 class="font-bold">${properties.place || 'Unknown location'}</h4>
+                            <p class="text-sm text-slate-400">${formatDate(properties.time)}</p>
+                        </div>
+                        <span class="magnitude ${getMagnitudeClass(properties.mag)}">${properties.mag.toFixed(1)}</span>
+                    </div>
+                `;
+
+                // Add click event to center map on this earthquake
+                listItem.addEventListener('click', () => {
+                    const coordinates = quake.geometry.coordinates;
+                    map.setView([coordinates[1], coordinates[0]], 8);
+                    markers[index].openPopup();
+                });
+
+                listContainer.appendChild(listItem);
+            });
+        }
+
+        // USGS monitoring variables and functions
+        let usgsMonitoringInterval;
+        let usgsSessionId;
+
+        $('#usgsMonitorForm').on('submit', function (e) {
+            e.preventDefault();
+
+            const formData = {
+                min_magnitude: parseFloat($('input[name="min_magnitude"]').val()),
+                interval: parseInt($('input[name="interval"]').val())
+            };
+
+            // Start USGS monitoring
+            $.ajax({
+                url: '/api/start_usgs_monitoring',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(formData),
+                success: function (response) {
+                    usgsSessionId = response.session_id;
+                    $('#usgsStatus').removeClass('hidden');
+                    startUsgsStatusChecks();
+
+                    // Enable the stop button
+                    $('#stopUsgsBtn').prop('disabled', false);
+                },
+                error: function (xhr) {
+                    alert('Error starting USGS monitoring: ' + xhr.responseJSON?.error || 'Unknown error');
+                }
+            });
+        });
+
+        $('#stopUsgsBtn').on('click', function () {
+            if (!usgsSessionId) return;
+
+            $.ajax({
+                url: `/api/stop_usgs_monitoring/${usgsSessionId}`,
+                method: 'POST',
+                success: function (response) {
+                    clearInterval(usgsMonitoringInterval);
+                    $('#usgsMonitoringBadge').removeClass('bg-green-100 text-green-800').addClass('bg-gray-100 text-gray-800');
+                    $('#usgsMonitoringBadge').html('Stopped');
+                    $(this).prop('disabled', true);
+                },
+                error: function (xhr) {
+                    alert('Error stopping monitoring: ' + xhr.responseJSON?.error || 'Unknown error');
+                }
+            });
+        });
+
+        function startUsgsStatusChecks() {
+            // Clear any existing interval
+            if (usgsMonitoringInterval) {
+                clearInterval(usgsMonitoringInterval);
+            }
+
+            // Check status every 20 seconds
+            usgsMonitoringInterval = setInterval(checkUsgsStatus, 20000);
+            checkUsgsStatus(); // Initial check
+        }
+
+        function checkUsgsStatus() {
+            if (!usgsSessionId) return;
+
+            $.get(`/api/monitoring_status/${usgsSessionId}`, function (response) {
+                // Show alerts
+                if (response.alerts && response.alerts.length > 0) {
+                    updateUsgsAlerts(response.alerts);
+                }
+
+                // Handle completion or error
+                if (response.status === 'error') {
+                    clearInterval(usgsMonitoringInterval);
+                    $('#usgsMonitoringBadge').removeClass('bg-green-100 text-green-800').addClass('bg-red-100 text-red-800');
+                    $('#usgsMonitoringBadge').html('Error');
+                    alert('USGS Monitoring error: ' + response.error);
+                }
+
+            }).fail(function (xhr) {
+                console.error('USGS status check failed:', xhr.responseJSON?.error || 'Unknown error');
+            });
+        }
+
+        function updateUsgsAlerts(alerts) {
+            if (!alerts || alerts.length === 0) return;
+
+            const alertsHtml = alerts.map(alert => `
+                <div class="p-4 rounded-lg ${getAlertClass(alert.level)}">
+                    <div class="flex justify-between items-start">
+                        <h3 class="font-bold text-lg">${alert.level} ALERT</h3>
+                        <span class="text-xs text-slate-400">
+                            ${new Date(alert.timestamp).toLocaleString()}
+                        </span>
+                    </div>
+                    <p class="mt-2">${alert.message}</p>
+                    <p class="mt-2 font-semibold">${alert.action_required}</p>
+                </div>
+            `).join('');
+
+            $('#usgsAlerts').html(alertsHtml);
+        }
+
+        function getAlertClass(level) {
+            switch (level) {
+                case 'SEVERE':
+                    return 'bg-red-500/20 border-red-500 border text-red-100';
+                case 'WARNING':
+                    return 'bg-yellow-500/20 border-yellow-500 border text-yellow-100';
+                default:
+                    return 'bg-blue-500/20 border-blue-500 border text-blue-100';
+            }
+        }
+
+        // Event listener for update button
+        document.getElementById('updateMap').addEventListener('click', loadEarthquakeData);
+
+        // Load initial data
+        document.addEventListener('DOMContentLoaded', loadEarthquakeData);
+    </script>
+</body>
+
+</html>
